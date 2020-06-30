@@ -87,6 +87,8 @@ inputPort :: Netlist.PortDeclaration -> String
 inputPort (Netlist.Coq_mkPort name Bit) = "  input logic " ++ name
 inputPort (Netlist.Coq_mkPort name (BitVec k s))
   = "  input " ++ vectorDeclaration name k s
+inputPort (Netlist.Coq_mkPort name (ExternalType t))
+  = "  input " ++ t ++ " " ++ name
 
 vectorDeclaration :: String -> Kind -> Integer -> String
 vectorDeclaration name k s
@@ -101,6 +103,8 @@ outputPort :: Netlist.PortDeclaration -> String
 outputPort (Netlist.Coq_mkPort name Bit) = "  output logic " ++ name
 outputPort (Netlist.Coq_mkPort name (BitVec k s))
   = "  output " ++ vectorDeclaration name k s
+outputPort (Netlist.Coq_mkPort name (ExternalType t))
+  = "  output " ++ t ++ " " ++ name
 
 insertCommas :: [String] -> [String]
 insertCommas [] = []

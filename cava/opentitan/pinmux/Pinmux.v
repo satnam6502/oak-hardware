@@ -22,6 +22,8 @@ Import ListNotations.
 Require Import ExtLib.Structures.Monads.
 Export MonadNotation.
 
+Require Import Omega.
+
 Open Scope monad_scope.
 
 Require Import Cava.Cava.
@@ -34,27 +36,34 @@ Definition NMioPads := 32.
 Definition pinmuxInterface :=
   sequentialInterface "pinmux"
      "clk_i" PositiveEdge "rst_ni" NegativeEdge
+
      (mkPort "tl_i" (ExternalType "tlul_pkg::tl_h2d_t"),
-      mkPort "periph_to_mio_i" (BitVec [NPeriphOut-1]),
-      mkPort "periph_to_mio_oe_i" (BitVec [NPeriphOut-1]),
-      mkPort "mio_in_i" (BitVec [NMioPads-1]))
-     (mkPort "tl_o" (ExternalType "tlul_pkg::tl_d2h_t "),
-      mkPort "mio_to_periph_o" (BitVec [NPeriphIn-1]),
-      mkPort "mio_out_o" (BitVec [NMioPads-1]),
-      mkPort "mio_oe_o" (BitVec [NMioPads-1]))
+      mkPort "periph_to_mio_i" (BitVec Bit NPeriphOut),
+      mkPort "periph_to_mio_oe_i" (BitVec Bit NPeriphOut),
+      mkPort "mio_in_i" (BitVec Bit NMioPads)
+     )
+
+     (mkPort "tl_o" (ExternalType "tlul_pkg::tl_d2h_t"),
+      mkPort "mio_to_periph_o" (BitVec Bit NPeriphIn),
+      mkPort "mio_out_o" (BitVec Bit NMioPads),
+      mkPort "mio_oe_o" (BitVec Bit NMioPads)
+     )
      [].
 
-Definition pinmux {m bit} `{Cava m bit}
-                  (inputs: string *
-                           list bit *
-                           list bit *
-                           list bit) :
-                  m (string *
-                     list bit *
-                     list bit *
-                     list bit)%type :=
+Definition pinmux (inputs: Signal (ExternalType "tlul_pkg::tl_h2d_t") *
+                           Signal (BitVec Bit NPeriphOut) *
+                           Signal (BitVec Bit NPeriphOut) *
+                           Signal (BitVec Bit NMioPads)) :
+                    state CavaState 
+                    (Signal (ExternalType "tlul_pkg::tl_d2h_t") *
+                     Signal (BitVec Bit NPeriphIn) *
+                     Signal (BitVec Bit NMioPads) *
+                     Signal (BitVec Bit NMioPads))%type :=
   let '(tl_i, periph_to_mio_i, periph_to_mio_oe_i, mio_in_i) := inputs in
   z <- zero ;;
-  ret ("xxx", repeat z NPeriphIn, repeat z NMioPads, repeat z NMioPads).
+  ret (UninterpretedSignal "xxx",
+       VecLit (Vector.const z NPeriphIn),
+       VecLit (Vector.const z NMioPads),
+       VecLit (Vector.const z NMioPads)).
 
-(* Definition pinmux_netlist := makeNetlist pinmuxInterface pinmux. *)
+Definition pinmuxNetlist := makeNetlist pinmuxInterface pinmux.
