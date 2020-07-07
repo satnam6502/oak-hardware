@@ -23,6 +23,7 @@ import FullAdder
 import UnsignedAdderExamples
 import AdderTree
 import Sorter
+import ASAP2020
 
 main :: IO ()
 main = do writeSystemVerilog nand2Netlist
@@ -45,3 +46,4 @@ main = do writeSystemVerilog nand2Netlist
           writeTestBench fullAdder_tb
           writeSystemVerilog two_sorter_Netlist
           writeTestBench two_sorter_tb
+          writeSystemVerilog adder8Netlist

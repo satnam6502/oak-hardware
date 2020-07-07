@@ -21,6 +21,7 @@ Require Import FullAdder.
 Require Import UnsignedAdderExamples.
 Require Import AdderTree.
 Require Import Sorter.
+Require Import ASAP2020.
 From Coq Require Import Extraction.
 From Coq Require Import extraction.ExtrHaskellZInteger.
 From Coq Require Import extraction.ExtrHaskellString.
@@ -36,3 +37,4 @@ Extraction Library FullAdder.
 Extraction Library UnsignedAdderExamples.
 Extraction Library AdderTree.
 Extraction Library Sorter.
+Extraction Library ASAP2020.

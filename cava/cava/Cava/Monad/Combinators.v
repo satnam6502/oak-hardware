@@ -250,6 +250,18 @@ Definition circuit_dec_rewrite `{Monad m} {A B C x y} (H: x = S y)
   | right Hneq => match add_S_contra _ _ H Hneq with end
   end.
 
+Fixpoint colV2 `{Monad m} {A B C} (n: nat)
+              (circuit : C -> A -> m (B * C)%type) 
+              (c: C) (a: Vector.t A n) :
+              m (Vector.t B n * C)%type :=
+  match n, a with
+  | O, v2 => ret ([], c)
+  | S n', vx => let (v0, vs) := Vector.uncons vx in
+                '(s0, c0) <- circuit c v0 ;;
+                '(sx, co) <- colV2 n' circuit c0 vs ;;
+                ret (s0::sx, co)
+  end.
+
 Fixpoint colV `{Monad m} {A B C} (n: nat)
               (circuit : C -> A -> m (B * C)%type) 
               (c: C) (a: Vector.t A n) :
