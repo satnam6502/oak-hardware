@@ -83,6 +83,72 @@ Fixpoint defaultKind (k: Kind) : smashNetTy k :=
   | ExternalType _ => UninterpretedSignal "XXX"
   end.
 
+Local Set Universe Polymorphism.
+Inductive listA {A : Type} : Type := nilA | consA (_:A) (_:listA).
+ Arguments listA : clear implicits.
+ 
+Fixpoint hlist@{i j} (argts : listA@{j} Type@{i}) : Type@{j} :=
+  match argts with
+  | nilA => unit
+  | consA T argts' => T * hlist argts'
+  end.
+
+Definition x1 := hlist nilA.
+Compute x1.
+
+Definition x2 := hlist (consA nat nilA).
+Compute x2.
+
+Definition t2 : x2 := (42, tt).
+Compute t2.
+
+Definition x3 := hlist (consA nat (consA bool nilA)).
+Compute x3.
+
+Definition t3 : x3 := (42, (false, tt)).
+Compute t3.
+
+Definition x4 := hlist (consA (Signal Void) (consA (Signal Bit) nilA)).
+Compute x4.
+
+Definition t4 : x4 := (UndefinedSignal, (Gnd, tt)).
+Compute t4.
+
+Fixpoint buildSignalType (kl: list Kind) : listA Set :=
+  match kl with
+  | [] => nilA
+  | k::kx => consA (Signal k) (buildSignalType kx)
+  end.
+Check buildSignalType.
+
+Inductive CollectSignals :=
+| SignalCollection : forall (kl: list Kind), hlist (buildSignalType kl) -> CollectSignals.
+
+Definition sc1 := SignalCollection [Void] (UndefinedSignal, tt).
+Compute sc1.
+
+Definition sc2 := SignalCollection [Bit; Void] (Gnd, (UndefinedSignal, tt)).
+Compute sc2.
+
+Fixpoint buildSignalArgType (kl: list Kind) : listA Set :=
+  match kl with
+  | [] => nilA
+  | k::kx => consA (string * Signal k)%type (buildSignalArgType kx)
+  end.
+
+Fixpoint repeatA {T} (a: T) (n: nat) :=
+  match n with
+  | O => nilA
+  | S n' => consA a (repeatA a n')
+  end.
+
+Definition tupleA A n := hlist (repeatA A n).
+Fixpoint of_listA {A} (xs : list A) : tupleA A (length xs) :=
+  match xs with
+  | nil => tt
+  | cons x xs => (x, of_listA xs)
+  end.
+
 Inductive Instance : Type :=
   (* SystemVerilog primitive gates. *)
   | Not:       Signal Bit -> Signal Bit -> Instance
@@ -107,9 +173,11 @@ Inductive Instance : Type :=
                                             Signal (BitVec Bit b) ->
                                             Signal Bit ->
                                             Instance
-  | Component: forall {k}, string -> list (string * ConstExpr) ->
-                                     list (string * Signal k) ->
-                                     Instance.
+  | Component: forall (kl: list Kind),
+               string ->
+               list (string * ConstExpr) ->
+               hlist (buildSignalArgType kl) ->
+               Instance.
 
 (******************************************************************************)
 (* Data structures to represent circuit graph/netlist state                   *)

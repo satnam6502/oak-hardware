@@ -90,8 +90,9 @@ Local Open Scope N_scope.
 Definition lut1Net (f : bool -> bool) (i : Signal Bit) : state CavaState (Signal Bit) :=
   let config := N.b2n (f false) + 2 * N.b2n (f true) in
   o <- newWire ;;
-  addInstance (Component "LUT1" [("INIT", HexLiteral 2 config)]
-                         [("O", o); ("I0", i)]) ;;
+  addInstance (Component [Bit; Bit]
+                         "LUT1" [("INIT", HexLiteral 2 config)]
+                         (of_listA [("O", o); ("I0", i)])) ;;
   ret o.
 
 Definition lut2Net (f : bool -> bool -> bool) (i : Signal Bit * Signal Bit) :
@@ -102,8 +103,9 @@ Definition lut2Net (f : bool -> bool -> bool) (i : Signal Bit * Signal Bit) :
                 8 * N.b2n (f true true) in
   let (i0, i1) := i in
   o <- newWire ;;
-  addInstance (Component "LUT2" [("INIT", HexLiteral 4 config)]
-                         [("O", o); ("I0", i0); ("I1", i1)]) ;;
+  addInstance (Component [Bit; Bit; Bit]
+                         "LUT2" [("INIT", HexLiteral 4 config)]
+                         (of_listA [("O", o); ("I0", i0); ("I1", i1)])) ;;
   ret o.                       
 
 Definition f3List (f: bool -> bool -> bool -> bool) (l: list bool) : bool :=
@@ -119,8 +121,9 @@ Definition lut3Net (f : bool -> bool -> bool -> bool)
   let config := fold_left N.add powers 0 in
   let '(i0, i1, i2) := i in
   o <- newWire ;;
-  addInstance (Component "LUT3" [("INIT", HexLiteral 8 config)]
-                         [("O", o); ("I0", i0); ("I1", i1); ("I2", i2)]) ;;
+  addInstance (Component [Bit; Bit; Bit; Bit]
+                         "LUT3" [("INIT", HexLiteral 8 config)]
+                         (of_listA [("O", o); ("I0", i0); ("I1", i1); ("I2", i2)])) ;;
   ret o.
 
 Definition f4List (f: bool -> bool -> bool -> bool -> bool) (l: list bool) :
@@ -138,8 +141,9 @@ Definition lut4Net (f : bool -> bool -> bool -> bool -> bool)
   let config := fold_left N.add powers 0 in
   let '(i0, i1, i2, i3) := i in
   o <- newWire ;;
-  addInstance (Component "LUT4" [("INIT", HexLiteral 16 config)]
-                          [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3)]) ;;
+  addInstance (Component [Bit; Bit; Bit; Bit; Bit]
+                         "LUT4" [("INIT", HexLiteral 16 config)]
+                         (of_listA [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3)])) ;;
   ret o.
 
 Definition f5List (f: bool -> bool -> bool -> bool -> bool -> bool)
@@ -156,8 +160,9 @@ Definition lut5Net (f : bool -> bool -> bool -> bool -> bool -> bool)
   let config := fold_left N.add powers 0 in
   let '(i0, i1, i2, i3, i4) := i in
   o <- newWire ;;
-  addInstance (Component "LUT5" [("INIT", HexLiteral 32 config)]
-                          [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3); ("I4", i4)]) ;;
+  addInstance (Component [Bit; Bit; Bit; Bit; Bit; Bit]
+                         "LUT5" [("INIT", HexLiteral 32 config)]
+                         (of_listA [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3); ("I4", i4)])) ;;
   ret o.                        
 
 Definition f6List (fn: bool -> bool -> bool -> bool -> bool -> bool -> bool)
@@ -174,8 +179,9 @@ Definition lut6Net (f : bool -> bool -> bool -> bool -> bool -> bool -> bool)
   let config := fold_left N.add powers 0 in
   let '(i0, i1, i2, i3, i4, i5) := i in 
   o <- newWire ;;
-  addInstance (Component "LUT6" [("INIT", HexLiteral 64 config)]
-                          [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3); ("I4", i4); ("I5", i5)] ) ;;
+  addInstance (Component [Bit; Bit; Bit; Bit; Bit; Bit; Bit]
+                         "LUT6" [("INIT", HexLiteral 64 config)]
+                         (of_listA [("O", o); ("I0", i0); ("I1", i1); ("I2", i2); ("I3", i3); ("I4", i4); ("I5", i5)])) ;;
   ret o.
 
 Local Close Scope N_scope.
@@ -183,12 +189,16 @@ Local Close Scope N_scope.
 Definition xorcyNet (i : Signal Bit * Signal Bit) : state CavaState (Signal Bit) :=
   let (ci, li) := i in
   o <- newWire ;;
-  addInstance (Component "XORCY" [] [("O", o); ("CI", fst i); ("LI", snd i)]) ;;
+  addInstance (Component [Bit; Bit; Bit]
+                         "XORCY" []
+                         (of_listA [("O", o); ("CI", fst i); ("LI", snd i)])) ;;
   ret o.
 
 Definition muxcyNet (s ci di : Signal Bit) : state CavaState (Signal Bit) :=
   o <- newWire ;;
-  addInstance ( Component "MUXCY" [] [("O", o); ("S", s); ("CI", ci); ("DI", di)]) ;;
+  addInstance ( Component [Bit; Bit; Bit; Bit]
+                           "MUXCY" []
+                           (of_listA [("O", o); ("S", s); ("CI", ci); ("DI", di)])) ;;
   ret o.
 
 Definition unsignedAddNet {m n : nat} 
