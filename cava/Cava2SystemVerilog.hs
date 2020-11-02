@@ -24,6 +24,7 @@ where
 import Control.Monad.State.Lazy
 import Numeric
 import qualified Vector
+import System.IO
 
 import qualified BinNums
 import Netlist
@@ -35,12 +36,16 @@ import Types
 writeSystemVerilog :: CavaState -> IO ()
 writeSystemVerilog cavastate@(Netlist.Coq_mkCavaState _ _ _ _
                     _ _ _ _ _ libs)
-  = do putStr ("Generating " ++ filename ++ "...")
+  = do putStrLn ("Number of top-level instances: " ++ show instCount)
+       hFlush stdout
+       putStr ("Generating " ++ filename ++ "...")
+       hFlush stdout
        writeFile filename ("// Cava auto-generated SystemVerilog. Do not hand edit.\n")
        sequence_ [appendFile filename (unlines (cava2SystemVerilog (swapIn m cavastate))) | (_, m) <- libs]
        appendFile filename (unlines (cava2SystemVerilog cavastate))
        putStrLn (" [done]")
     where
+    instCount = length (Netlist.netlist (Netlist.coq_module cavastate))
     filename = Netlist.moduleName (Netlist.coq_module cavastate) ++ ".sv"
 
 
