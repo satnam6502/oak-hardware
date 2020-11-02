@@ -23,7 +23,9 @@ import XilinxAdderExamples
 import XilinxAdderTree
 
 main :: IO ()
-main = do writeSystemVerilog lutNANDNetlist
+main = do writeSystemVerilog adder_tree_large_Netlist
+{-
+          writeSystemVerilog lutNANDNetlist
           writeTestBench lutNAND_tb
           writeSystemVerilog adder8Netlist
           writeTestBench adder8_tb
@@ -36,4 +38,4 @@ main = do writeSystemVerilog lutNANDNetlist
           writeSystemVerilog adder_tree64_128Netlist
           -- writeSystemVerilog adder_tree128_256Netlist
           -- writeTestBench adder_tree128_256_tb
-
+-}

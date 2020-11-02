@@ -194,3 +194,9 @@ Definition adder_tree128_256_tb_expected_outputs
 Definition adder_tree128_256_tb :=
   testBench "xadder_tree128_256_tb" adder_tree128_256Interface
   adder_tree128_256_tb_inputs adder_tree128_256_tb_expected_outputs.
+
+(* A very big adder-tree *)
+
+Definition adder_tree_large_Interface := adder_tree_Interface "xadder_tree_large" 256 1024.
+Definition adder_tree_large_Netlist
+  := makeNetlist adder_tree_large_Interface (adderTree Gnd 7).
