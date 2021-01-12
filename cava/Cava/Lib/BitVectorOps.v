@@ -14,9 +14,13 @@
 (* limitations under the License.                                           *)
 (****************************************************************************)
 
+Require Import Coq.Bool.Bool.
+Require Import Coq.Bool.Bvector.
 Require Import Coq.Vectors.Vector.
 Import VectorNotations.
-Local Open Scope vector_scope.
+Require Import Coq.Lists.List.
+Import ListNotations.
+Local Open Scope list_scope.
 
 Require Import ExtLib.Structures.Monads.
 Require Import ExtLib.Structures.Traversable.
@@ -34,4 +38,7 @@ Section WithCava.
     cava (signal (Vec Bit n)) :=
     zipWith xor2 (fst ab) (snd ab).
 
-End WithCava.
+Definition l1 : seqType (Vec Bit 3) := [[false; false; false]%vector; [true; true; false]%vector]%list.
+Definition l2 : seqType (Vec Bit 3) := [[false; true; false]%vector;  [false; true; false]%vector]%list.
+
+Compute sequential (xorV (l1, l2)).
