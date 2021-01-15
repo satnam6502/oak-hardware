@@ -17,6 +17,7 @@
 
 From Coq Require Import Lists.List.
 Import ListNotations.
+Require Import Coq.ZArith.ZArith.
 Require Import ExtLib.Structures.Monads.
 Require Export ExtLib.Data.Monads.IdentityMonad.
 Require Import ExtLib.Structures.Traversable.
@@ -27,6 +28,7 @@ From Coq Require Import Bool.Bvector.
 Require Import Cava.Cava.
 From Cava Require Import Signal.
 Require Import Cava.Tactics.
+Require Import Cava.Acorn.DefaultValue.
 Require Import Cava.Acorn.CavaClass.
 Require Import Cava.Acorn.CombinationalMonad.
 Require Import Cava.Acorn.Combinators.
@@ -52,8 +54,8 @@ Require Import Cava.Acorn.Combinators.
 
    This is particularly useful for chaining repeated outputs of a circuit with
    delays. *)
-Definition overlap {A} (offset : nat) (a1 a2 : seqType A) : seqType A :=
-  a1 ++ repeat (defaultCombValue A) (offset - length a1) ++ skipn (length a1 - offset) a2.
+Definition overlap {A} `{DefaultValue A} (offset : nat) (a1 a2 : list A) : list A :=
+  a1 ++ repeat defaultValue (offset - length a1) ++ skipn (length a1 - offset) a2.
 
 (******************************************************************************)
 (* Loop combinator for feedback with delay.                                   *)
@@ -73,26 +75,49 @@ The nth value in the output accumulator is always the output value for
 timestep n. Because there may be delay in the body of the loop, the accumulator
 might include outputs past the current timestep. *)
 
-Definition loopSeqS' {A B : SignalType}
-           (f : seqType A * seqType B -> ident (seqType B))
-           (state: nat * ident (seqType B)) (a : combType A)
-  : nat * ident (seqType B) :=
+Definition loopSeqS' {A B : Type} `{DefaultValue B}
+           (f : list A * list B -> ident (list B))
+           (state: nat * ident (list B)) (a : A)
+  : nat * ident (list B) :=
   let t := fst state in
   (S t,
    out <- snd state ;; (* get the output accumulator *)
    (* get the value of out at previous timestep (because of delay) *)
    let outDelayed := match t with
-                     | 0 => defaultCombValue B
-                     | S t' => nth t' out (defaultCombValue B)
+                     | 0 => defaultValue
+                     | S t' => nth t' out defaultValue
                      end in
    b <- f ([a], [outDelayed]) ;; (* Process one input *)
    let out' := overlap t out b in (* append new output, starting at timestep t *)
    ret out').
 
-Definition loopSeqS {A B : SignalType}
-                    (f : seqType A * seqType B -> ident (seqType B))
-                    (a : seqType A) : ident (seqType B) :=
+Definition loopSeqS {A B : Type} `{DefaultValue B}
+                    (f : list A * list B -> ident (list B))
+                    (a : list A) : ident (list B) :=
   snd (fold_left (loopSeqS' f) a (0, ret [])).
+
+Definition loopSeqSEnable' {A B : Type} `{DefaultValue B}
+           (f : list A * list B -> ident (list B))
+           (state: nat * ident (list B)) (en_a : bool * A)
+  : nat * ident (list B) :=
+  let (en, a) := en_a in
+  let t := fst state in
+  (S t,
+   out <- snd state ;; (* get the output accumulator *)
+   (* get the value of out at previous timestep (because of delay) *)
+   let outDelayed := match t with
+                     | 0 => defaultValue
+                     | S t' => nth t' out defaultValue
+                     end in
+   b <- f ([a], [outDelayed]) ;; (* Process one input *)
+   let out' := overlap t out (if en then b else [outDelayed])  in (* append new output, starting at timestep t *)
+   ret out').
+
+Definition loopSeqSEnable {A B : Type} `{DefaultValue B}
+                          (en : list bool) 
+                          (f : list A * list B -> ident (list B))
+                          (a: list A) : ident (list B) :=
+  snd (fold_left (loopSeqSEnable' f) (combine en a) (0, ret [])).
 
 (******************************************************************************)
 (* A boolean sequential logic interpretation for the Cava class               *)
@@ -170,11 +195,6 @@ Definition muxcyBoolList (s : list bool) (ci : list bool) (di : list bool)  : id
        | true => ci
      end) s_dici).
 
-Definition pairSelList {t: SignalType}
-                       (sel : list bool) (v: list (combType t * combType t))
-  : list (combType t) :=
-  ListUtils.map2 pairSelBool sel v.
-
 Definition indexAtBoolList {t: SignalType}
                        {sz isz: nat}
                        (i : list (Vector.t (combType t) sz))
@@ -249,6 +269,7 @@ Definition delayEnableBoolList (t: SignalType) (en: list bool) (i : seqType t) :
                              ident (seqType t) :=
   delayEnableBoolList' t en i (defaultCombValue t).
 
+
 (******************************************************************************)
 (* Instantiate the Cava class for a boolean sequential logic                  *)
 (* interpretation.                                                            *)
@@ -279,7 +300,6 @@ Definition delayEnableBoolList (t: SignalType) (en: list bool) (i : seqType t) :
     unpair _ _ v := split v;
     peel _ _ v := peelVecList v;
     unpeel _ _ v := unpeelVecList v;
-    pairSel _ v sel := pairSelList v sel;
     indexAt t sz isz := @indexAtBoolList t sz isz;
     indexConst t sz := @indexConstBoolList t sz;
     slice t sz := @sliceBoolList t sz;
@@ -291,21 +311,10 @@ Definition delayEnableBoolList (t: SignalType) (en: list bool) (i : seqType t) :
   }.
 
  Instance SequentialSemantics : CavaSeq SequentialCombSemantics :=
-   { delay t i := ret (@defaultCombValue t :: i);
+   { delay t i := ret (defaultValue :: i);
      delayEnable t en i := delayEnableBoolList t en i;
-     loopDelayS _ _ := loopSeqS;
-     loopDelaySEnable A B en f input :=
-       (* The semantics of loopDelaySEnable is defined in terms of loopDelayS and
-          the circuitry required to model a clock enable with a multiplexor. *)
-         loopSeqS (fun (en_i_state : seqType (Pair Bit A) * seqType B)  =>
-                     let state := snd en_i_state in
-                     let '(en, i) := unpair (fst en_i_state) in
-                     (second fork2 >=> (* (i, state, state) *)
-                       pairLeft >=>    (* ((i, state), state) *)
-                       first f >=>     (* (f (i, state), state) *)
-                       swap >=>        (* (state, f (i, state) *)
-                       mux2 en)        (* if en then f (i, state) else state *)
-                       (i, state)) (mkpair en input)
+     loopDelayS _ _ _ := loopSeqS;
+     loopDelaySEnable a b d m md := @loopSeqSEnable a b _ m md;
    }.
 
 (******************************************************************************)

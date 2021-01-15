@@ -27,6 +27,7 @@ Require Import Coq.Arith.PeanoNat.
 
 Export MonadNotation.
 
+Require Import Cava.Acorn.DefaultValue.
 Require Import Cava.Acorn.CavaClass.
 Require Import Cava.VectorUtils.
 Require Import Cava.ListUtils.
@@ -74,26 +75,25 @@ Section WithCava.
 
    (* pairLeft takes an input with shape (a, (b, c)) and re-organizes
       it as ((a, b), c) *)
-   Definition pairLeft {A B C : SignalType}
-                       (i : signal A * (signal B * signal C)) :
-                       cava ((signal A * signal B) * signal C) :=
-   let '(a, (b, c)) := i in
+   Definition pairLeft {A B C} `{Monad m}
+                       '(a, (b, c)) : m ((A * B) * C) :=
    ret ((a, b), c).
 
   (* pairRight takes an input with shape ((a, b), c) and re-organizes
      it as (a, (b, c)) *)
-  Definition pairRight {A B C : SignalType}
-                       (i : (signal A * signal B) * signal C) :
-                       cava (signal A * (signal B * signal C)) :=
+  Definition pairRight {A B C} `{Monad m}
+                       (i : (A * B) * C) :
+                       m (A * (B * C)) :=
    let '((a, b), c) := i in
-   ret (a, (b, c)).
+   ret (a, (b, c)). 
 
-  Definition mux2 {A : SignalType}
-                  (sel : signal Bit)
-                  (i : signal A * signal A) :
-                  cava (signal A) :=
-  ret (pairSel sel (mkpair (fst i) (snd i))).
- 
+  (* Specialized indexAt for two inputs as a circuit *)
+  Definition mux2 {t} (sel: signal Bit) (i : signal t * signal t)
+                      : cava (signal t) :=
+    let '(i0, i1) := i in                   
+    let o : signal t := indexAt (unpeel [i0; i1]%vector) (unpeel [sel]%vector) in
+    ret o.
+
   (* Use a circuit to zip together two vectors. *)
   Definition zipWith {A B C : SignalType} {n : nat}
            (f : signal A * signal B -> cava (signal C))
@@ -303,7 +303,7 @@ Section WithCava.
   (* Forks in wires                                                           *)
   (****************************************************************************)
 
-  Definition fork2 `{Monad_m : Monad cava} {A} (a:A) := ret (a, a).
+  Definition fork2 {A} `{Monad m} (a:A) : m (A * A) := ret (a, a).
 
   (****************************************************************************)
   (* Operations over pairs.                                                   *)
@@ -333,10 +333,7 @@ Section WithCava.
   (* Swap                                                                     *)
   (****************************************************************************)
 
-  Definition swap `{Monad_m : Monad cava} {A B}
-                  (i : signal A * signal B) 
-                  : cava (signal B * signal A) :=
-    let (a, b) := i in
+  Definition swap {A B} `{Monad m} '(a, b) : m (B * A) :=
     ret (b, a).
 
   (****************************************************************************)
@@ -570,45 +567,42 @@ Section WithCava.
                   all eq_results
     end.
 
-  Definition pairAssoc {A B C} (x : signal (Pair (Pair A B) C))
-    : signal (Pair A (Pair B C)) :=
-    let '(ab, c) := unpair x in
-    let '(a, b) := unpair ab in
-    mkpair a (mkpair b c).
-
-  Definition mux4 {t} (input : signal (Pair (Pair (Pair t t) t) t))
+  Definition muxBit4 (input : signal Bit * signal Bit * signal Bit * signal Bit)
              (sel : signal (Vec Bit 2)) :=
-    let x := pairAssoc input in
-    pairSel (indexConst sel 0) (pairSel (indexConst sel 1) x).
+    let '(i0, i1, i2, i3) := input in
+    indexAt (unpeel [i0; i1; i2; i3]%vector) sel.
 
   Section Sequential.
     Context {seqsemantics : CavaSeq semantics}.
 
+    Local Open Scope type_scope.
+
     (* Alternate form of feedback loop with feedback and output types separated *)
-    Definition loopDelay {A B C: SignalType}
-               (body : signal A * signal C -> cava (signal B * signal C))
-               (input : signal A) : cava (signal B) :=
+    Definition loopDelay {A B C: Type} `{DefaultValue B} `{DefaultValue C}
+               (body : A * C -> cava (B * C))
+               (input : A) : cava B :=
       bc <- loopDelayS
-             (fun (a_bc : signal A * signal (Pair B C)) =>
+             (fun (a_bc : A * (B * C)) =>
                 let '(a, bc) := a_bc in
-                let '(b,c) := unpair bc in
+                let '(b,c) := bc in
                 '(b,c) <- body (a,c) ;;
-                ret (mkpair b c))
+                ret (b, c))
              input ;;
-      ret (fst (unpair bc)).
+      ret (fst bc).
 
     (* Alternate form of enabled feedback loop with feedback and output types separated *)
-    Definition loopDelayEnable {A B C: SignalType} (enable : signal Bit)
-        (body : signal A * signal C -> cava (signal B * signal C))
-        (input : signal A) : cava (signal B) :=
+    Definition loopDelayEnable {A B C: Type} `{DefaultValue B} `{DefaultValue C}
+               (enable : signal Bit)
+        (body : A * C -> cava (B * C))
+        (input : A) : cava B :=
       bc <- loopDelaySEnable
              enable
-             (fun (a_bc : signal A * signal (Pair B C)) =>
+             (fun (a_bc : A * (B * C)) =>
                 let '(a, bc) := a_bc in
-                let '(b,c) := unpair bc in
+                let '(b,c) := bc in
                 '(b,c) <- body (a,c) ;;
-                ret (mkpair b c))
+                ret (b, c))
              input ;;
-      ret (fst (unpair bc)).
+      ret (fst bc).
   End Sequential.
  End WithCava.

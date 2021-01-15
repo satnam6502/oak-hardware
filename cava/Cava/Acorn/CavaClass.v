@@ -1,5 +1,5 @@
 (****************************************************************************)
-(* Copyright 2020 The Project Oak Authors                                   *)
+(* Copyright 2021 The Project Oak Authors                                   *)
 (*                                                                          *)
 (* Licensed under the Apache License, Version 2.0 (the "License")           *)
 (* you may not use this file except in compliance with the License.         *)
@@ -14,9 +14,11 @@
 (* limitations under the License.                                           *)
 (****************************************************************************)
 
-
+Require Import Cava.Acorn.DefaultValue.
 Require Import Cava.Netlist.
 Require Import Cava.Signal.
+Require Import Coq.ZArith.ZArith.
+Require Import ExtLib.Structures.Monads.
 
 Local Open Scope type_scope.
 
@@ -59,7 +61,6 @@ Class Cava (signal : SignalType -> Type) := {
   peel : forall {t : SignalType} {s : nat}, signal (Vec t s) -> Vector.t (signal t) s;
   unpeel : forall {t : SignalType} {s : nat} , Vector.t (signal t) s -> signal (Vec t s);
   (* Dynamic indexing *)
-  pairSel : forall {t : SignalType}, signal Bit -> signal (Pair t t) -> signal t;
   indexAt : forall {t : SignalType} {sz isz: nat},
             signal (Vec t sz) ->     (* A vector of n elements of type signal t *)
             signal (Vec Bit isz) ->  (* A bit-vector index of size isz bits *)
@@ -101,17 +102,15 @@ Class CavaSeq {signal : SignalType -> Type} (combinationalSemantics : Cava signa
   delayEnable : forall {t: SignalType}, signal Bit -> signal t -> cava (signal t);
   (* Feedback loop, with unit delay inserted into the feedback path and current
      state available at output . *)
-  loopDelayS : forall {A B: SignalType},
-               (signal A * signal B -> cava (signal B)) ->
-               signal A ->
-               cava (signal B);
+  loopDelayS : forall {A B: Type} `{DefaultValue B},
+               (A * B -> cava B) -> A -> cava B;
   (* A version of loopDelayEnable with a clock enable and current state at
      the output. *)
-  loopDelaySEnable : forall {A B: SignalType},
+  loopDelaySEnable : forall {A B: Type} `{DefaultValue B},
                      signal Bit -> (* Clock enable *)
-                     (signal A * signal B -> cava (signal B)) ->
-                     signal A ->
-                     cava (signal B);
+                     (A * B -> cava B) ->
+                     A ->
+                     cava B;
 }.
 
 (* Alternate version of sequential semantics which assumes the sequential part
