@@ -135,8 +135,6 @@ Definition loopBool (A B C : SignalType)
  Instance CombinationalSemantics : Cava combType :=
   { cava := ident;
     constant b := b;
-    zero := ret false;
-    one := ret true;
     defaultSignal t := @defaultCombValue t;
     inv := notBool;
     and2 := andBool;

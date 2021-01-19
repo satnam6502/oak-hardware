@@ -27,10 +27,9 @@ Require Import Coq.Arith.PeanoNat.
 
 Export MonadNotation.
 
-Require Import Cava.Acorn.CavaClass.
+Require Import Cava.Acorn.Acorn.
 Require Import Cava.VectorUtils.
 Require Import Cava.ListUtils.
-Require Import Cava.Signal.
 Require Import Cava.Tactics.
 
 Generalizable All Variables.
@@ -634,7 +633,7 @@ Section WithCava.
   Qed.
 
   Definition all {n} (v : signal (Vec Bit n)) : cava (signal Bit) :=
-    default <- one ;;
+    let default := constant true ;;
     tree_all_sizes default (fun x y => and2 (x,y)) (peel v).
 
   Fixpoint eqb {t : SignalType} : signal t -> signal t -> cava (signal Bit) :=

@@ -14,10 +14,17 @@
 (* limitations under the License.                                           *)
 (****************************************************************************)
 
-Require Export Cava.Acorn.CavaClass.
-Require Export Cava.Signal.
-Require Export Cava.Acorn.CombinationalMonad.
-Require Export Cava.Acorn.Sequential.
-Require Export Cava.Acorn.Combinators.
-Require Export Cava.Acorn.NetlistGeneration.
-Require Export Cava.Acorn.Prelude.
+Require Import ExtLib.Structures.Monads.
+Require Import Cava.Acorn.CavaClass.
+Require Import Cava.Signal.
+
+Section WithCava.
+  Context {signal} `{Cava signal} `{Monad cava}.
+
+  (* Constant values sourced by a circuit. *)
+  (* This component always returns the value 0. *)
+  Definition zero : cava (signal Bit) := ret (constant false).
+  (* This component always returns the value 1. *)
+  Definition one  : cava (signal Bit) := ret (constant true).
+
+End WithCava.
