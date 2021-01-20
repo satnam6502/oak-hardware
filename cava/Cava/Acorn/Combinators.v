@@ -47,6 +47,10 @@ Section WithCava.
   (* Lava-style circuit combinators.                                          *)
   (****************************************************************************)
 
+  (****************************************************************************)
+  (* Combinators over pairs.                                                  *)
+  (****************************************************************************)
+
   (* Operations over the first or second element of a pair of inputs. *)
 
   (* Apply a circuit f to the first element of a pair. *)
@@ -166,6 +170,44 @@ Section WithCava.
     cbn [bind ret Monad_ident].
     rewrite IHls. reflexivity.
   Qed.
+
+  (****************************************************************************)
+  (* Combinators over vectors.                                                *)
+  (****************************************************************************)
+
+  Definition reverse {A} {n} {m} `{Monad m} (v : Vector.t A n) : m (Vector.t A n) :=
+    ret (Vector.rev v).
+
+  Definition halve {A n} (v : Vector.t A (n + n)) : Vector.t A n * Vector.t A n :=
+    splitat n v.
+
+  Definition halveV {A n} {m} `{Monad m} (v : Vector.t A (n + n)) : m (Vector.t A n * Vector.t A n) :=
+    ret (halve v).
+
+  Definition ziP {A n} {m} `{Monad m} (v1v2 : Vector.t A n * Vector.t A n) : m (Vector.t (A * A) n) :=
+    let (v1, v2) := v1v2 in
+    ret (vcombine v1 v2).
+
+  Local Open Scope vector_scope.
+
+  Definition reshape_unpair {A} {n} (v : Vector.t A (2 + (n + n))) : t A (S n + S n).
+  Proof.
+    rewrite Nat.add_succ_l.
+    rewrite Nat.add_succ_r.
+    apply v.
+  Defined.
+
+  Fixpoint unpair {A n} (v : Vector.t (A * A) n) : Vector.t A (n + n) :=
+  match n return Vector.t (A * A) n -> Vector.t A (n + n) with
+  | O    => fun _ => []
+  | S n' => fun ys => match uncons ys with
+                      | (ab, zs) => let (a, b) := ab in
+                                    reshape_unpair (Vector.append [a; b] (unpair zs))
+            end
+  end v.
+
+  Example unpair_ex1 : unpair [(1, 2); (3 ,4)] = [1; 2; 3; 4].
+  Proof. reflexivity. Qed.
 
   (* Below combinator
 
