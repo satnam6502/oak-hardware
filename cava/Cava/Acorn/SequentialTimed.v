@@ -159,6 +159,7 @@ Definition blackBoxF (intf : CircuitInterface)
     unsignedAdd m n := @unsignedAddBoolF m n;
     unsignedMult m n := @unsignedMultBoolF m n;
     greaterThanOrEqual m n := @greaterThanOrEqualBoolF m n;
+    localSignal _ v := ret v;
     instantiate _ circuit := circuit;
     blackBox intf _ := blackBoxF intf;
   }.

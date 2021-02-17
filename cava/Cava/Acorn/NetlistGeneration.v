@@ -190,7 +190,9 @@ Definition muxcyNet (s ci di : Signal Bit) : state CavaState (Signal Bit) :=
   ret o.
 
 Definition unpairNet {t1 t2 : SignalType} (v : Signal (Pair t1 t2)) : Signal t1 * Signal t2 :=
-  (SignalFst v, SignalSnd v).
+  match v with
+  | SignalPair a b => (a, b)
+  end.
 
 Definition mkpairNet {t1 t2 : SignalType} (v1 : Signal t1) (v2 : Signal t2) : Signal (Pair t1 t2) :=
   SignalPair v1 v2.
@@ -266,6 +268,13 @@ Definition loopNetEnableS (A B : SignalType)
   assignSignal o oDelay ;;
   ret out.
 
+Definition localSignalNet {A : SignalType}
+                          (v : Signal A)
+                          : state CavaState (Signal A) :=
+   ns <- newSignal A ;;
+   assignSignal ns v ;;
+   ret ns.
+
 Definition instantiateNet (intf : CircuitInterface)
                           (circuit : tupleNetInterface (circuitInputs intf) ->
                                     state CavaState (tupleNetInterface (circuitOutputs intf)))
@@ -312,6 +321,7 @@ Instance CavaCombinationalNet : Cava denoteSignal := {
     unsignedAdd m n ab := @UnsignedAdd m n (1 + max m n) (fst ab) (snd ab);
     unsignedMult m n ab := @UnsignedMultiply m n (m + n) (fst ab) (snd ab);
     greaterThanOrEqual m n ab := @GreaterThanOrEqual m n (fst ab) (snd ab);
+    localSignal := @localSignalNet;
     instantiate := instantiateNet;
     blackBox := blackBoxNet;
 }.

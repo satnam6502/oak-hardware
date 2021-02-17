@@ -35,7 +35,7 @@ haskell:	coq FixupHaskell
 		./FixupHaskell
 		mv Ascii2.hs Ascii.hs
 		mv ByteVector2.hs ByteVector.hs
-		runhaskell Setup.hs configure --user
+		runhaskell Setup.hs configure --user --enable-library-profiling --ghc-option=-fprof-auto
 		runhaskell Setup.hs build
 		runhaskell Setup.hs install
 

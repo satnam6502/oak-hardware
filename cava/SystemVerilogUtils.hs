@@ -13,10 +13,14 @@
    limitations under the License.
 -}
 
+{-# LANGUAGE StandaloneDeriving #-}
+
 module SystemVerilogUtils
 where
 
 import Signal
+
+deriving instance Show SignalType
 
 insertCommas :: [String] -> [String]
 insertCommas [] = []
@@ -28,6 +32,7 @@ vectorDeclaration' k s
   = case k of
       Bit -> "[" ++ show (s - 1) ++ ":0]"
       Vec k2 s2 -> "[" ++ show (s - 1) ++ ":0]" ++  vectorDeclaration' k2 s2
+      other -> error ("vectorDeclaration' called with " ++ show other)
 
 vectorDeclaration :: String -> SignalType -> Integer -> String
 vectorDeclaration name k s

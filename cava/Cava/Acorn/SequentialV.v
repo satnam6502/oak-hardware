@@ -265,6 +265,7 @@ Definition delayV (ticks : nat) (t : SignalType) (def : combType t) : seqVType t
     unsignedAdd m n xy := Vector.map (@unsignedAddBool m n) (vcombine (fst xy) (snd xy));
     unsignedMult m n xy := Vector.map (@unsignedMultBool m n) (vcombine (fst xy) (snd xy));
     greaterThanOrEqual m n xy := Vector.map (@greaterThanOrEqualBool m n) (vcombine (fst xy) (snd xy));
+    localSignal _ v := ret v ;
     instantiate _ circuit := circuit;
     blackBox intf _ := ret (tupleInterfaceDefaultSV ticks (map port_type (circuitOutputs intf)));
   }.

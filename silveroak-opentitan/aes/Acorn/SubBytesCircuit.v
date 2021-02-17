@@ -152,6 +152,8 @@ Section WithCava.
 
   Definition aes_sbox_lut (is_decrypt : signal Bit) (b : signal (Vec Bit 8))
     : cava (signal (Vec Bit 8)) :=
+    sbox_fwd_lut' <- localSignal sbox_fwd_lut ;;
+    sbox_inv_lut' <- localSignal sbox_inv_lut ;;
     let encrypted := indexAt sbox_fwd_lut b in
     let decrypted := indexAt sbox_inv_lut b in
     let vec := unpeel [encrypted; decrypted] in

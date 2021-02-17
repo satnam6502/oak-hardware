@@ -36,7 +36,7 @@ BENCHES = $(SV:.sv=_tb.sv)
 CPPS = $(SV:.sv=_tb.cpp)
 VCDS = $(SV:.sv=_tb.vcd)
 
-.PRECIOUS: $(VCDS)
+.PRECIOUS: $(VCDS) AESSV
 
 all:		coq $(VCDS)
 util:		aes_sub_bytes_util aes_mix_columns_util aes_add_round_key_util \
@@ -61,8 +61,8 @@ coq:		Makefile.coq
 		$(MAKE) -f Makefile.coq
 
 AESSV:		coq AESSV.hs
-		ghc --make AESSV.hs
-		./AESSV
+		ghc --make -prof -fprof-auto AESSV.hs
+		./AESSV +RTS -p
 
 minimize-requires: coq
 	../../../tools/minimize-requires.sh

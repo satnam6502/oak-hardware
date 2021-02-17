@@ -38,7 +38,7 @@ import TestBench
 NOTES.
 ======
 The current SystemVerilog extraction process only generates packed arrays.
-All arrays are interpretated as having "downto" indexing e.g. [3:0].
+All arrays are interpreted as having "downto" indexing e.g. [3:0].
 An attempt is made to unsmash literals to recover stems of arrays.
 -}
 
@@ -175,7 +175,7 @@ showSignal signal
       SignalFst _ _ s -> showSignal (simplifySignal s)
       SignalSnd _ _ s -> showSignal (simplifySignal s)
       -- SignalPair should never occur but added here to aid debugging.
-      SignalPair _ _ a b -> "(" ++ showSignal a ++ ", " ++ showSignal b ++ ")"
+      SignalPair _ _ a b -> error ("SignalPair found: (" ++ showSignal a ++ ", " ++ showSignal b ++ ")")
       UnsignedAdd _ _ _ a b -> "(" ++ showSignal a ++ " + " ++ showSignal b ++ ")"
       UnsignedSubtract _ _ _ a b -> "(" ++ showSignal a ++ " - " ++ showSignal b ++ ")"
       UnsignedMultiply _ _ _ a b -> "(" ++ showSignal a ++ " * " ++ showSignal b ++ ")"
@@ -185,12 +185,11 @@ simplifySignal :: Signal -> Signal
 simplifySignal (SignalFst _ _ s)
   = case simplifySignal s of
       SignalPair _ _ a _ -> simplifySignal a
-      other -> error ("Unable to simplfy SignalFst argument " ++ show other)
+      other -> error ("Unable to simplify SignalFst argument " ++ show other)
 simplifySignal (SignalSnd _ _ s)
   = case simplifySignal s of
       SignalPair _ _ _ b -> simplifySignal b
-      other -> error ("Unable to simplfy SignalSnd argument " ++ show other)
--- TODO: Consider adding other compile time evaluations e.g. for IndexConst.
+      other -> error ("Unable to simplify SignalSnd argument " ++ show other)
 simplifySignal s = s
 
 showSliceIndex :: SignalType -> Integer -> Integer -> String
@@ -309,7 +308,6 @@ deriving instance Eq Signal
 deriving instance Show Signal
 deriving instance Show (Vector.Coq_t Signal)
 deriving instance Show BinNums.N
-deriving instance Show SignalType
 
 unsmashSignalInstance :: Instance -> State CavaState Instance
 unsmashSignalInstance = mapSignalsInInstanceM unsmashSignal
@@ -322,45 +320,14 @@ mapSignalsInInstanceM :: (Signal -> State CavaState Signal) ->
                           Instance -> State CavaState Instance
 mapSignalsInInstanceM f inst
   = case inst of
-      Not i o -> do fi <- f i
-                    fo <- f o
-                    return (Not fi fo)
-      And i0 i1 o -> do fi0 <- f i0
-                        fi1 <- f i1
-                        fo  <- f o
-                        return (And fi0 fi1 fo)
-      Nand i0 i1 o -> do fi0 <- f i0
-                         fi1 <- f i1
-                         fo  <- f o
-                         return (Nand fi0 fi1 fo)
-      Or i0 i1 o -> do fi0 <- f i0
-                       fi1 <- f i1
-                       fo  <- f o
-                       return (Or fi0 fi1 fo)
-      Nor i0 i1 o -> do fi0 <- f i0
-                        fi1 <- f i1
-                        fo  <- f o
-                        return (Nor fi0 fi1 fo)
-      Xor i0 i1 o -> do fi0 <- f i0
-                        fi1 <- f i1
-                        fo  <- f o
-                        return (Xor fi0 fi1 fo)
-      Xnor i0 i1 o -> do fi0 <- f i0
-                         fi1 <- f i1
-                         fo  <- f o
-                         return (Xnor fi0 fi1 fo)
-      Buf i o -> do fi <- f i
-                    fo <- f o
-                    return (Buf fi fo)
       Delay t d i o -> do fd <- f d
                           fi <- f i
                           fo <- f o
                           return (Delay t fd fi fo)
       DelayEnable t d en i o -> do fd <- f d
-                                   fen <- f en
                                    fi <- f i
-                                   fo <- f o
-                                   return (DelayEnable t fd fen fi fo)
+                                   fo <- f o 
+                                   return (DelayEnable t fd en fi fo)
       AssignSignal k t v -> do ft <- f t
                                fv <- f v
                                return (AssignSignal k ft fv)
@@ -368,6 +335,9 @@ mapSignalsInInstanceM f inst
         do let sigs = map (extractSignal . snd) vals
            sigs' <- sequence (map f sigs)
            return (Component name args (zip (map fst vals) (map untypeSignal sigs')))
+      other -> -- An instance which does not have any vector ports so no need to
+               -- to process for unsmashing.
+               return other
 
 --------------------------------------------------------------------------------
 -- Extract Signal from UntypedSignal
@@ -401,7 +371,7 @@ checkStem k sz (v:vs)
   = case v of
       IndexConst k2 s2 v2 startingIndex ->
        case k of
-          Bit        -> checkIndexes k s2 startingIndex v2 (startingIndex+1) vs
+          Bit     -> checkIndexes k s2 startingIndex v2 (startingIndex+1) vs
           Vec _ _ -> checkIndexes k s2 startingIndex v2 (startingIndex+1) vs
       _ -> Nothing
 
@@ -446,6 +416,9 @@ unsmashSignal signal
                                     return (Slice k s startAt len fv)
       _ -> return signal
 
+      other -> -- An instance which does not have any vector ports so no need to
+               -- to process for unsmashing.
+               return other
 -- If a signal is a vector literal, give it a name and return that name.
 -- Used to rewrite vector literals in locations where they are not allowed
 -- or in places where very large long lines would get generated.
